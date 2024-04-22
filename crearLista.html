@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        #formPlaylist {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            border: 1px solid #dee2e6;
+        }
+
+        .form-control {
+            margin-bottom: 10px;
+        }
+
+        button.btn {
+            margin-right: 5px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+
+        #listasDeUsuarioTable {
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        #listasDeUsuarioTable th,
+        #listasDeUsuarioTable td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Mis Listas de Reproducción</h2>
+    <button class="btn btn-primary" onclick="mostrarFormularioCrear()">Agregar Nueva</button>
+    <table id="listasDeUsuarioTable" class="table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Videos</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Las filas se llenarán dinámicamente -->
+        </tbody>
+    </table>
+
+    <div id="formPlaylist" class="d-none">
+        <h2>Formulario de Playlist</h2>
+        <form onsubmit="guardarPlaylist(event)">
+            <input type="text" id="playlistNombre" class="form-control mb-3" placeholder="Nombre del playlist *"
+                required>
+            <textarea id="playlistDescripcion" class="form-control mb-3" placeholder="Descripción del playlist"
+                rows="4"></textarea>
+            <div id="playlistPerfiles">
+                <!-- Checkbox de perfiles cargados dinámicamente -->
+            </div>
+            <button type="submit" class="btn btn-success">Guardar</button>
+            <button type="button" class="btn btn-secondary" onclick="ocultarFormulario()">Cancelar</button>
+        </form>
+    </div>
+
+    <div id="videosContainer">
+        <h2>Lista de Videos</h2>
+        <table id="videosTable" class="table">
+            <thead class="thead-light">
+                <tr>
+                    <th>Nombre del Video</th>
+                    <th>Enlace</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="videosBody">
+                <!-- Aquí se cargarán dinámicamente los videos -->
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            cargarListasDeUsuario();
+            cargarUsuariosRestringidos();
+            cargarVideosTabla();
+        });
+
+        function cargarListasDeUsuario() {
+            const token = sessionStorage.getItem('token');
+            fetch('http://localhost:3000/usuariosrestringido/listas', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => response.json())
+                .then(listas => {
+                    console.log("lisstas",listas);
+                    const tableBody = document.getElementById('listasDeUsuarioTable').getElementsByTagName('tbody')[0];
+                    tableBody.innerHTML = ''; // Limpiar contenido anterior
+                    listas.forEach(lista => {
+                        let row = tableBody.insertRow();
+                        row.insertCell(0).textContent = lista.nombre;
+                        row.insertCell(1).textContent = lista.descripcion;
+                        row.insertCell(2).textContent = lista.videos.length.toString();
+                        let actionsCell = row.insertCell(3);
+                        actionsCell.innerHTML = `<button class="btn btn-info btn-sm" onclick="editarPlaylist('${lista._id}')">Editar</button>
+                                             <button class="btn btn-danger btn-sm" onclick="eliminarPlaylist('${lista._id}')">Eliminar</button>`;
+                    });
+                })
+                .catch(error => {
+                    console.error('Error al obtener listas:', error);
+                });
+        }
+
+        function mostrarFormularioCrear() {
+            var form = document.getElementById('formPlaylist');
+            form.classList.remove('d-none');
+            cargarUsuariosRestringidos();
+        }
+        
+
+        function ocultarFormulario() {
+            var form = document.getElementById('formPlaylist');
+            form.classList.add('d-none');
+        }
+
+
+
+        function guardarPlaylist(event) {
+            event.preventDefault();
+            const nombre = document.getElementById('playlistNombre').value;
+            const descripcion = document.getElementById('playlistDescripcion').value;
+            const checkboxes = document.querySelectorAll('#playlistPerfiles input[type=checkbox]:checked');
+            const perfiles = Array.from(checkboxes).map(cb => cb.value);
+
+            const token = sessionStorage.getItem('token');
+            const url = 'http://localhost:3000/usuariosrestringido/crearlista';
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ nombre, descripcion, perfiles })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Operación exitosa:', data);
+                    cargarListasDeUsuario(); // Recarga las listas de reproducción después de agregar una nueva
+                    ocultarFormulario();
+                })
+                .catch(error => {
+                    console.error('Error al guardar la playlist:', error);
+                });
+        }
+
+        function eliminarPlaylist(id) {
+            const token = sessionStorage.getItem('token');
+            fetch(`http://localhost:3000/usuariosrestringido/listas/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('Falló la eliminación');
+                    cargarListasDeUsuario(); // Recarga las listas de reproducción después de eliminar una
+                })
+                .catch(error => {
+                    console.error('Error al eliminar la playlist:', error);
+                });
+        }
+
+        function cargarUsuariosRestringidos() {
+            const token = sessionStorage.getItem('token');
+            fetch('http://localhost:3000/usuariosrestringido/usuarios', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('Error al cargar');
+                    return response.json();
+                })
+                .then(usuarios => {
+                    console.log('Usuarios cargados:', usuarios);
+
+                    const perfilesContainer = document.getElementById('playlistPerfiles');
+                    perfilesContainer.innerHTML = '';
+                    usuarios.forEach(usuario => {
+                        const label = document.createElement('label');
+                        label.textContent = usuario.nombre;
+                        label.htmlFor = usuario._id;
+
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.id = usuario._id;
+                        checkbox.value = usuario._id;
+                        checkbox.name = 'perfiles[]';
+
+                        label.appendChild(checkbox);
+                        perfilesContainer.appendChild(label);
+                        perfilesContainer.appendChild(document.createElement('br'));
+                    });
+                })
+                .catch(error => {
+                    console.error('Error al cargar usuarios restringidos:', error);
+                });
+        }
+
+
+
+        function cargarVideosTabla() {
+            const token = sessionStorage.getItem('token');
+
+            fetch('http://localhost:3000/usuariosrestringido/videos', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // Agrega el token en el encabezado Authorization
+                }
+            })
+                .then(response => response.json())
+                .then(videos => {
+                    const videosBody = document.getElementById('videosBody');
+                    videosBody.innerHTML = ''; // Limpiar contenido anterior
+
+                    videos.forEach(video => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                <td>${video.nombre}</td>
+                <td><a href="${video.enlace}" target="_blank">Ver Video</a></td>
+                <td>
+                    <select id="listaReproduccionSelect_${video._id}"></select>
+                    <button onclick="agregarVideoAListaReproduccion('${video._id}')">Guardar Lista</button>
+                </td>
+            `;
+                        videosBody.appendChild(row);
+
+                        // Cargar las listas de reproducción en el select correspondiente
+                        cargarListasReproduccion(video._id, `listaReproduccionSelect_${video._id}`);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error al cargar videos:', error);
+                });
+        }
+
+
+        function cargarListasReproduccion(videoId) {
+            const token = sessionStorage.getItem('token');
+
+            fetch('http://localhost:3000/usuariosrestringido/listas', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => response.json())
+                .then(listas => {
+                    const selectLista = document.getElementById(`listaReproduccionSelect_${videoId}`);
+                    selectLista.innerHTML = ''; // Limpiar opciones anteriores
+
+                    listas.forEach(lista => {
+                        const option = document.createElement('option');
+                        option.value = lista._id;
+                        option.textContent = lista.nombre;
+                        selectLista.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error al cargar listas de reproducción:', error);
+                });
+        }
+
+        function agregarVideoAListaReproduccion(videoId) {
+            const listaSeleccionada = document.getElementById(`listaReproduccionSelect_${videoId}`).value;
+            const token = sessionStorage.getItem('token');
+            fetch('http://localhost:3000/agregarVideoALista', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    videoId: videoId,
+                    lista: listaSeleccionada
+                })
+            })
+                .then(response => {
+                    if (response.ok) {
+                        alert('Video agregado a la lista correctamente.');
+                        cargarVideosTabla(); // Recarga la tabla de videos después de agregar un video a una lista
+                        cargarListasDeUsuario(); // Podría ser necesario si también quieres actualizar la cantidad de videos en las listas
+                    } else {
+                        throw new Error('Error al agregar video a la lista.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al agregar video a la lista:', error);
+                    alert('Error al agregar video a la lista.');
+                });
+        }
+
+        function eliminarPlaylist(id) {
+            console.log(id);
+            if (!confirm("¿Estás seguro de que deseas eliminar esta playlist?")) {
+                return; // No hacer nada si el usuario cancela la operación.
+            }
+            const token = sessionStorage.getItem('token');
+            fetch(`http://localhost:3000/usuariosrestringido/listas/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('Falló la eliminación');
+                    alert('Playlist eliminada correctamente.');
+                    cargarListasDeUsuario(); // Recarga las listas de reproducción después de eliminar una
+                })
+                .catch(error => {
+                    console.error('Error al eliminar la playlist:', error);
+                    alert('Error al eliminar la playlist: ' + error.message);
+                });
+        }
+
+    function editarPlaylist(id) {
+    const token = sessionStorage.getItem('token');
+    fetch(`http://localhost:3000/usuariosrestringido/listas/${id}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(lista => {
+        document.getElementById('playlistId').value = lista._id;
+        document.getElementById('playlistNombre').value = lista.nombre;
+        document.getElementById('playlistDescripcion').value = lista.descripcion;
+        // Si también manejas los videos o perfiles, debes actualizar el estado de esos elementos aquí
+        mostrarFormularioCrear();
+    })
+    .catch(error => {
+        console.error('Error al cargar la lista para editar:', error);
+        alert('No se pudo cargar la información de la lista.');
+    });
+}
+
+        
+
+    </script>
+
+</body>
+
+</html>

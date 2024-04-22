@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Usuarios Restringidos</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.2/min/dropzone.min.css" rel="stylesheet">
+    <style>
+        /* Estilos generales */
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Estilos para el navbar */
+        .navbar {
+            background-color: #ff6f61 !important; /* Color de fondo llamativo */
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            color: #fff; /* Color del texto del navbar */
+            font-weight: bold;
+        }
+
+        .navbar-nav .nav-link {
+            color: #fff !important; /* Color del texto de los enlaces */
+            transition: color 0.3s ease;
+        }
+
+        .navbar-nav .nav-link:hover {
+            color: #fff !important; /* Color del texto de los enlaces al pasar el mouse */
+        }
+
+        /* Estilos para el formulario */
+        #formulario-nuevo-usuario {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group label {
+            font-weight: bold;
+        }
+
+        .characters-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .character-card {
+            width: 120px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid #ff6f61; /* Borde de los personajes */
+            border-radius: 10px; /* Esquinas redondeadas */
+            padding: 5px;
+            background-color: #fff; /* Color de fondo de los personajes */
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .character-card:hover {
+            transform: scale(1.05); /* Efecto de aumento al pasar el mouse */
+        }
+
+        .character-card img {
+            width: 80px;
+            border-radius: 50%;
+            margin-bottom: 5px;
+        }
+
+        .btn-primary {
+            background-color: #ff6f61;
+            border-color: #ff6f61;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #ff3e35; /* Color más oscuro al pasar el mouse */
+            border-color: #ff3e35; /* Borde más oscuro al pasar el mouse */
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">TUBEKIDS</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="mostrarUsuariosRestringidos.html" id="volverPagina">Atras</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="inicioSesion.html" id="cerrarSesion">Salir</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <h1 class="mb-4">Registro de Usuarios Restringidos</h1>
+
+        <form id="formulario-nuevo-usuario" class="needs-validation" novalidate>
+            <input type="hidden" id="userId"> 
+            <input type="hidden" id="avatar"> 
+
+            <div class="form-group">
+                <label for="nombre">Nombre:</label>
+                <input type="text" class="form-control" id="nombre" required>
+                <div class="invalid-feedback">
+                    Por favor ingresa un nombre válido.
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="pin">PIN:</label>
+                <input type="text" class="form-control" id="pin" required pattern="[0-9]{6}">
+                <div class="invalid-feedback">
+                    Por favor ingresa un PIN válido (6 dígitos numéricos).
+                </div>
+            </div>
+            <div class="form-group">
+                <h2>Selecciona un personaje de Disney:</h2>
+                <div class="characters-list" id="charactersList"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="edad">Edad:</label>
+                <input type="number" class="form-control" id="edad" required>
+                <div class="invalid-feedback">
+                    Por favor ingresa una edad válida.
+                </div>
+            </div>
+
+            <!-- Botón para agregar o editar usuario, dependiendo de la situación -->
+            <button type="button" class="btn btn-primary btn-block mt-3" onclick="GuardarUsuario()">Agregar
+                Usuario</button>
+        </form>
+    </div>
+
+    <script>
+        // Función para cargar y mostrar los personajes de Disney
+        async function cargarPersonajesDisney() {
+            
+            try {
+                const response = await fetch('https://api.disneyapi.dev/character');
+                const data = await response.json();
+                const characters = data.data;
+
+                const charactersList = document.getElementById('charactersList');
+
+                characters.forEach(character => {
+                    const characterCard = document.createElement('div');
+                    characterCard.classList.add('character-card');
+                    characterCard.setAttribute('data-character-id', character.url);
+
+                    const characterImg = document.createElement('img');
+                    characterImg.src = character.imageUrl;
+                    characterImg.alt = character.name;
+
+                    const characterName = document.createElement('p');
+                    characterName.textContent = character.name;
+
+                    characterCard.appendChild(characterImg);
+                    characterCard.appendChild(characterName);
+                    charactersList.appendChild(characterCard);
+
+                    // Agrego evento de clic para seleccionar el personaje
+                    characterCard.addEventListener('click', () => {
+                        const avatarInput = document.getElementById('avatar');
+                        avatarInput.value = character.imageUrl;
+                        alert(`Has seleccionado a ${character.name}`);
+                    });
+                });
+            } catch (error) {
+                console.error('Error al cargar los personajes de Disney:', error);
+            }
+        }
+
+
+        function GuardarUsuario() {
+            // Obtengo el token JWT del almacenamiento local
+            const token = sessionStorage.getItem('token');
+            console.log('Token JWT ...:', token); 
+            const ajaxRequest = new XMLHttpRequest();
+            ajaxRequest.addEventListener("load", function () {
+                if (ajaxRequest.status >= 200 && ajaxRequest.status < 300) {
+                    const data = JSON.parse(ajaxRequest.responseText);
+                    console.log(data);
+                    alert('Te has registrado correctamente');
+                    window.location.reload(); // Recarga la página para actualizar la tabla
+                    window.location.assign("pantallaPrincipal.html");
+                } else {
+                    console.error('Error en la solicitud:', ajaxRequest.responseText);
+                    alert("Hubo un error al intentar registrar el usuario");
+                }
+            });
+            ajaxRequest.addEventListener("error", function () {
+                console.error('Error en la solicitud:', ajaxRequest.responseText);
+                alert("Hubo un error al intentar registrar el usuario");
+            });
+
+            const userId = document.getElementById("userId").value;
+            let url = "http://localhost:3000/usuariosrestringido";
+            let method = "POST";
+            ajaxRequest.open(method, url);
+            ajaxRequest.setRequestHeader("Content-Type", "application/json");
+
+            const avatarUrl = document.getElementById("avatar").value; // Obtengo la URL del avatar
+            const data = {
+                nombre: document.getElementById("nombre").value,
+                pin: document.getElementById("pin").value,
+                avatar: avatarUrl, // Utiliza la URL del avatar seleccionado
+                edad: document.getElementById("edad").value
+            };
+            // Inclui el token JWT en el encabezado Authorization correctamente
+            ajaxRequest.setRequestHeader("Authorization", `Bearer ${token}`);
+            ajaxRequest.send(JSON.stringify(data));
+            console.log(data);
+        }
+
+
+
+        // Función para editar usuario
+        function EditarUsuario(usuarioId) {
+            const nuevoNombre = prompt("Ingrese el nuevo nombre del usuario:");
+            const nuevoPin = prompt("Ingrese el nuevo PIN del usuario:");
+            const nuevoAvatar = prompt("Ingrese el nuevo avatar del usuario:");
+            const nuevaEdad = prompt("Ingrese la nueva edad del usuario:");
+
+            if (nuevoNombre && nuevoPin && nuevoAvatar && nuevaEdad) {
+                fetch(`http://localhost:3000/usuariosrestringido/${usuarioId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nombre: nuevoNombre,
+                        pin: nuevoPin,
+                        avatar: nuevoAvatar,
+                        edad: nuevaEdad
+                    })
+
+                })
+                    .then(response => response.json())
+                    .then(updatedUsuario => {
+                        console.log("Usuario editado correctamente:", updatedUsuario);
+                        alert("Usuario editado correctamente");
+                        location.reload(); // Recargo la página para mostrar los cambios
+                    })
+                    .catch(error => {
+                        console.error('Error al editar el usuario:', error);
+                        alert("Hubo un error al intentar editar el usuario");
+                    });
+            } else {
+                console.log("La edición del usuario fue cancelada.");
+            }
+        }
+
+        // Función para eliminar usuario
+        function EliminarUsuario(userId) {
+            if (confirm("¿Estás seguro de que deseas eliminar este usuario?")) {
+                fetch(`http://localhost:3000/usuariosrestringido/${userId}`, {
+                    method: 'DELETE'
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            alert("Usuario restringido eliminado correctamente");
+                            window.location.reload(); // Recargo la página para actualizar la tabla
+                        } else {
+                            const errorMessage = response.statusText || 'Error desconocido'; // Verifica si response.statusText está definido
+                            console.error('Error en la solicitud:', errorMessage);
+                            alert("Hubo un error al intentar eliminar el usuario");
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error en la solicitud:', error);
+                        alert("Hubo un error al intentar eliminar el usuario");
+                    });
+            }
+        }
+
+        window.addEventListener('load', cargarPersonajesDisney);
+
+    </script>
+</body>
+
+</html>

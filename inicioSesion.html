@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="funciones.js"></script>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Iniciar Sesión</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <input type="email" class="form-control" name="email" id="email" required
+                    placeholder="Correo Electrónico">
+            </div>
+            <div class="form-group">
+                <input type="password" class="form-control" name="password" id="password" required
+                    placeholder="Contraseña">
+            </div>
+            <button type="button" class="btn btn-primary" onclick="login()">Iniciar Sesión</button>
+            <button type="button" class="btn btn-primary"
+                onclick="window.location.href='registro.html'">Registrarme</button>
+        </form>
+    </div>
+
+    <script>
+
+        // Función para manejar los errores en la solicitud AJAX
+        const error = (e) => console.log(e.target.responseText);
+
+        // Función principal para iniciar sesión
+        function login() {
+            // Crear una nueva instancia de XMLHttpRequest para hacer la solicitud AJAX
+            const ajaxRequest = new XMLHttpRequest();
+
+            // Evento que se activa cuando la solicitud AJAX se completa satisfactoriamente
+            ajaxRequest.addEventListener("load", function (response) {
+                // Parsear la respuesta JSON recibida del servidor
+                const responseData = JSON.parse(response.target.responseText);
+
+                // Verifica si se recibió un token válido en la respuesta
+                if (responseData.token) {
+                    // Almacena el token de sesión en el almacenamiento de sesión del navegador
+                    sessionStorage.setItem('token', responseData.token);
+                    console.log(responseData.token);
+
+                    // Verifica si el usuario tiene usuarios restringidos asociados
+                    const hasRestrictedUsers = responseData.hasRestrictedUsers;
+
+                    // Redirecciona al usuario según tenga usuarios restringidos o no
+                    if (hasRestrictedUsers) {
+                        // Redirige al usuario a la página principal (home)
+                        console.log('Redireccionando a la página home...');
+                        window.location.assign("pantallaPrincipal.html");
+                    } else {
+                        // Redirige al usuario a la página de agregar usuario restringido
+                        console.log('Redireccionando a la página de agregar usuario restringido...');
+                        window.location.assign("registroUsuariosRestringidos.html");
+                    }
+                } else {
+                    // Muestro un mensaje de error si no se recibe un token válido
+                    alert("Email o contraseña incorrecta, intentalo de nuevo");
+                }
+            });
+
+            // Evento que se activa si ocurre un error durante la solicitud AJAX
+            ajaxRequest.addEventListener("error", function (error) {
+                console.error("Error al iniciar sesión:", error);
+            });
+
+            // Configuro la solicitud AJAX con el método POST y la URL del endpoint de inicio de sesión
+            ajaxRequest.open("POST", "http://localhost:3000/api/session");
+
+            // Establezco el encabezado Content-Type para indicar que se envían datos en formato JSON
+            ajaxRequest.setRequestHeader("Content-Type", "application/json");
+
+            // Obtengo los datos de correo electrónico y contraseña del formulario
+            const data = {
+                'email': document.getElementById('email').value,
+                'password': document.getElementById('password').value
+            };
+
+            // Envia los datos en formato JSON en el cuerpo de la solicitud AJAX
+            ajaxRequest.send(JSON.stringify(data));
+        }
+
+    </script>
+</body>
+
+</html>
