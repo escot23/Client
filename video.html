@@ -98,6 +98,9 @@
                         <a class="nav-link" href="crearLista.html">Gestion de lista de reproducción</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="cargarPlaylist.html">Ge de reproducción</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="iniciosesion.html">Salir</a>
                     </li>
                 </ul>
@@ -105,104 +108,185 @@
         </div>
     </nav>
     <div class="container">
-        <h1>Crear Nuevo Video</h1>
-        <form id="formCrearVideo">
-            <div class="form-group">
-                <label for="videoName">Nombre:</label>
-                <input type="text" class="form-control" id="videoName" name="videoName" required>
+
+        <div class="container">
+            <h1>Gestión de Videos</h1>
+            <div id="playlistsContainer">
+                <!-- Aquí se cargarán las playlists -->
             </div>
-            <div class="form-group">
-                <label for="videoUrl">URL de YouTube:</label>
-                <input type="text" class="form-control" id="videoUrl" name="videoUrl" required>
+            <div id="selectedPlaylistVideos">
+                <!-- Aquí se mostrarán los videos de la playlist seleccionada -->
             </div>
-            <button type="button" class="btn btn-primary" onclick="GuardarVideo()">Guardar Video</button>
+            <h2>Agregar Nuevo Video</h2>
+            <form id="formCrearVideo">
+                <div class="form-group">
+                    <label for="videoName">Nombre:</label>
+                    <input type="text" class="form-control" id="videoName" name="videoName" required>
+                </div>
+                <div class="form-group">
+                    <label for="videoUrl">URL de YouTube:</label>
+                    <input type="text" class="form-control" id="videoUrl" name="videoUrl" required>
+                </div>
+                <div class="form-group">
+                    <label for="videoDescription">Descripción:</label>
+                    <textarea class="form-control" id="videoDescription" name="videoDescription" rows="3"></textarea>
+                </div>
+
+                <button type="button" class="btn btn-primary" onclick="GuardarVideo()">Guardar Video</button>
+
+        </div>
+
+        <div id="videosContainer">
+            <h2>Añadir video a una lista de reproduccion</h2>
+            <table id="videosTable" class="table">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Nombre del Video</th>
+                        <th>Enlace</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="videosBody">
+                    <!-- Aquí se cargarán dinámicamente los videos -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Modal para Video -->
+        <div id="videoModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="videoContainer" class="video-container"></div>
+            </div>
+        </div>
 
         </form>
-        <h2 class="mt-4">Lista de Videos</h2>
-        <h5>Seleccione un video para poder verlo:</h5>
-        <ul id="listaVideos" class="list-group"></ul>
-        <h2 class="mt-4">Mostramos video</h2>
-        <h5>Se cargan solo al dar click al listado:</h5>
-        <div id="videoIncrustado" class="video-container"></div>
     </div>
+
+    <h1>Listas de Reproducción</h1>
+    <div id="listasDeUsuario"></div>
+
     <script>
 
 
-        function loadVideos() {
+        function cargarVideosTabla() {
             const token = sessionStorage.getItem('token');
-            console.log("....token.....", token);
-            fetch('http://localhost:3000/videos', {
+
+            fetch('http://localhost:3000/usuariosrestringido/videos', {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${token}` // Incluyo el token JWT en el encabezado Authorization
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 }
             })
-                .then(response => {
-                    console.log('Respuesta recibida:', response);
-                    if (!response.ok) {
-                        throw new Error('La respuesta de la red falló. Código de estado: ' + response.status);
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(videos => {
-                    console.log('Videos obtenidos:', videos);
-                    const listaVideos = document.getElementById('listaVideos');
+                    const videosBody = document.getElementById('videosBody');
+                    videosBody.innerHTML = ''; // Limpiar contenido anterior
 
-                    // Limpio la lista de videos antes de agregar los nuevos
-                    listaVideos.innerHTML = '';
-                    console.log("Lista de videos", listaVideos);
                     videos.forEach(video => {
-                        const li = document.createElement('li');
-                        const videoLink = document.createElement('a');
-                        videoLink.textContent = video.nombre;
-                        videoLink.href = '#'; // Agrego un href para evitar recarga de página al hacer clic
-                        videoLink.onclick = function () {
-                            mostrarVideoIncrustado(video.urlYoutube);
-                            console.log("video que intenta mostrar", video.urlYoutube);
-                        };
-                        li.appendChild(videoLink);
-                        listaVideos.appendChild(li);
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+            <td>${video.nombre}</td>
+            <td><a href="#" onclick="mostrarVideoIncrustado('${video.urlYoutube}');return false;">Ver Video</a></td>
+            <td>
+                <select id="listaReproduccionSelect_${video._id}"></select>
+                <button onclick="agregarVideoAListaReproduccion('${video._id}')">Guardar Lista</button>
+            </td>
+            `;
+                        videosBody.appendChild(row);
+
+                        // Cargar las listas de reproducción en el select correspondiente
+                        cargarListasReproduccion(video._id, `listaReproduccionSelect_${video._id}`);
                     });
                 })
                 .catch(error => {
-                    console.error('Error en la solicitud:', error);
-                    alert("Hubo un error al cargar la lista de videos. Por favor, inténtalo de nuevo más tarde.");
+                    console.error('Error al cargar videos:', error);
                 });
         }
 
-
-        window.addEventListener('load', function () {
-            console.log('La página se ha cargado completamente.');
-            loadVideos();
-        });
-
         function mostrarVideoIncrustado(url) {
-            console.log('Mostrando video incrustado para URL:', url);
-            const videoId = obtenerVideoId(url);
-
+            const videoId = extractYouTubeID(url);
             if (videoId) {
-                console.log(videoId); // Verifica que se esté obteniendo el ID del video correctamente
+                const videoModal = document.getElementById('videoModal');
+                const videoContainer = document.getElementById('videoContainer');
+                videoContainer.innerHTML = `<iframe width="200" height="200" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+                videoModal.style.display = "block";
 
-                const videoIncrustado = document.getElementById('videoIncrustado');
-                videoIncrustado.innerHTML = ''; // Limpia contenido anterior
-
-                const iframe = document.createElement('iframe');
-                iframe.src = `https://www.youtube.com/embed/${videoId}`;
-                console.log(iframe.src); // Verifica la URL completa del iframe
-
-                iframe.width = '100%';
-                iframe.height = '400px';
-                iframe.setAttribute('frameborder', '0');
-                iframe.setAttribute('allowfullscreen', '');
-
-                videoIncrustado.appendChild(iframe);
-
-                console.log('Video ID:', videoId);
-                console.log('url de video incrustado', iframe.src);
+                // Close modal on click
+                var span = document.getElementsByClassName("close")[0];
+                span.onclick = function () {
+                    videoModal.style.display = "none";
+                }
             } else {
                 alert('URL de video no válida.');
             }
         }
+
+
+
+
+
+
+
+        function cargarListasReproduccion(videoId) {
+            const token = sessionStorage.getItem('token');
+
+            fetch('http://localhost:3000/usuariosrestringido/listas', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => response.json())
+                .then(listas => {
+                    const selectLista = document.getElementById(`listaReproduccionSelect_${videoId}`);
+                    selectLista.innerHTML = ''; // Limpiar opciones anteriores
+
+                    listas.forEach(lista => {
+                        const option = document.createElement('option');
+                        option.value = lista._id;
+                        option.textContent = lista.nombre;
+                        selectLista.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error al cargar listas de reproducción:', error);
+                });
+        }
+
+        function agregarVideoAListaReproduccion(videoId) {
+            const listaSeleccionada = document.getElementById(`listaReproduccionSelect_${videoId}`).value;
+            const token = sessionStorage.getItem('token');
+            fetch('http://localhost:3000/agregarVideoALista', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    videoId: videoId,
+                    lista: listaSeleccionada
+                })
+            })
+                .then(response => {
+                    if (response.ok) {
+                        alert('Video agregado a la lista correctamente.');
+                        cargarVideosTabla(); // Recarga la tabla de videos después de agregar un video a una lista
+                        /*cargarListasDeUsuario(); */// Podría ser necesario si también quieres actualizar la cantidad de videos en las listas
+                    } else {
+                        throw new Error('Error al agregar video a la lista.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al agregar video a la lista:', error);
+                    alert('Error al agregar video a la lista.');
+                });
+        }
+
+
+
 
 
         function obtenerVideoId(url) {
@@ -220,19 +304,22 @@
         function GuardarVideo() {
             const videoName = document.getElementById('videoName').value;
             let videoUrl = document.getElementById('videoUrl').value;
+            const videoDescription = document.getElementById('videoDescription').value; // Obtenemos la descripción
             const token = sessionStorage.getItem('token');
-            const userId = sessionStorage.getItem('userId'); // Asegúrate de que el ID del usuario está almacenado en localStorage
-            console.log("userua", userId);
+            const userId = sessionStorage.getItem('userId'); // Asegúrate de que el ID del usuario está almacenado en sessionStorage
+
             // Elimina parámetros adicionales de la URL de YouTube si los hay
             const urlParamsIndex = videoUrl.indexOf('?');
             if (urlParamsIndex !== -1) {
                 videoUrl = videoUrl.substring(0, urlParamsIndex);
             }
 
+            // Preparamos los datos para enviar incluyendo la descripción
             const data = JSON.stringify({
                 nombre: videoName,
                 urlYoutube: videoUrl,
-                usuario: userId // Incluyendo el userId en el cuerpo de la solicitud
+                descripcion: videoDescription, // Incluimos la descripción en los datos
+                usuario: userId
             });
 
             const ajaxRequest = new XMLHttpRequest();
@@ -242,12 +329,14 @@
             ajaxRequest.addEventListener("load", function () {
                 if (ajaxRequest.status >= 200 && ajaxRequest.status < 300) {
                     alert('El video se ha guardado correctamente');
+                    // Limpiamos los campos después de guardar
                     document.getElementById('videoName').value = '';
                     document.getElementById('videoUrl').value = '';
-                    loadVideos();
+                    document.getElementById('videoDescription').value = '';
+                    cargarVideosTabla(); // Recarga la lista de videos
                 } else {
                     console.error('Error en la solicitud:', ajaxRequest.responseText);
-                    alert("Hubo un error al intentar guardar el video");
+                    alert("Hubo un error al intentar guardar el video: " + ajaxRequest.responseText);
                 }
             });
             ajaxRequest.addEventListener("error", function () {
@@ -257,6 +346,125 @@
             ajaxRequest.send(data);
             console.log("Data enviada:", data);
         }
+
+        function cargarPlaylists() {
+            const token = sessionStorage.getItem('token');
+            fetch('http://localhost:3000/playlists', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => response.json())
+                .then(playlists => {
+                    const container = document.getElementById('playlistsContainer');
+                    // Agregamos verificación aquí para asegurarnos de que playlists no es undefined y es un array
+                    if (!playlists || !Array.isArray(playlists)) {
+                        console.error('No playlists found or response is not an array:', playlists);
+                        container.innerHTML = 'No playlists available.';
+                        return;
+                    }
+                    container.innerHTML = '';
+                    playlists.forEach(playlist => {
+                        // Asumimos que cada playlist debe tener una propiedad 'nombre' y una lista 'videos'
+                        const div = document.createElement('div');
+                        div.innerHTML = `<h3>${playlist.nombre} (${playlist.videoCount} videos)</h3>
+                     <button onclick="cargarListasConVideos()">Cargar Videos</button>`;
+                        container.appendChild(div);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error al cargar playlists:', error);
+                    document.getElementById('playlistsContainer').innerHTML = 'Failed to load playlists.';
+                });
+        }
+
+
+        function cargarListasConVideos() {
+    const token = sessionStorage.getItem('token');
+           
+    fetch('http://localhost:3000/usuariosrestringido/listasconvideos', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',  
+        }
+    })
+    .then(response => {
+        if (!response.ok) {  
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(listas => {
+        const listasContainer = document.getElementById('listasDeUsuario');
+        listasContainer.innerHTML = '';
+
+        listas.forEach(lista => {
+            const div = document.createElement('div');
+            div.className = 'playlist-container';
+            let content = `<h2>${lista.nombre}</h2>`;
+            lista.videos.forEach(video => {
+                content += `
+                    <div class="video-container">
+                        <h3>${video.nombre}</h3>
+                        <iframe class="video-frame" src="https://www.youtube.com/embed/${obtenerVideoId(video.urlYoutube)}" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                `;
+            });
+            div.innerHTML = content;
+            listasContainer.appendChild(div);
+        });
+    })
+    .catch(error => {
+        console.error('Error al cargar las listas y videos:', error);
+    });
+}
+        
+        function cargarVideosDePlaylist(playlistId) {
+            const token = sessionStorage.getItem('token');
+            fetch(`http://localhost:3000/playlists/${playlistId}/videos`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('selectedPlaylistVideos');
+                    console.log(data);
+                    if (Array.isArray(data)) {
+                        container.innerHTML = '<h2>Videos en la Playlist</h2>';
+                        data.forEach(video => {
+                            const div = document.createElement('div');
+                            div.innerHTML = `<p>${video.nombre}</p>
+                                 <iframe src="https://www.youtube.com/embed/${extractYouTubeID(video.urlYoutube)}" frameborder="0" allowfullscreen></iframe>`;
+                            container.appendChild(div);
+                        });
+                    } else {
+                        // Si data no es un arreglo, maneja la situación (e.g., mostrar un mensaje)
+                        console.error('La respuesta no es un arreglo:', data);
+                        container.innerHTML = `<p>${data.message || 'Error al cargar los videos.'}</p>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al cargar videos:', error);
+                    document.getElementById('selectedPlaylistVideos').innerHTML = 'Error al cargar videos.';
+                });
+        }
+
+
+
+        function extractYouTubeID(url) {
+            const match = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([^"&?\/\s]{11})/i);
+            return match ? match[1] : null;
+        }
+
+
+
+
+        window.addEventListener('load', function () {
+            cargarPlaylists();
+            cargarVideosTabla();
+            cargarListasConVideos();
+        });
+
 
 
     </script>
