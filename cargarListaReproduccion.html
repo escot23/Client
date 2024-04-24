@@ -34,31 +34,40 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            cargarListasDeReproduccion();
+            cargarListasDeReproduccion(); // Llama a la función para cargar las listas de reproducción
         });
 
         function cargarListasDeReproduccion() {
-            fetch('http://localhost:3000/api/listas', {
-                method: 'GET',
+            const userId = sessionStorage.getItem('userId'); // Obtiene el ID del usuario guardado en sessionStorage
+            const token = sessionStorage.getItem('token');
+            console.log("usuarioD", userId);
+            axios.post('http://localhost:3001/graphql', {
+                query: `
+                    query {
+                        getListasUsuario(iduser: "${userId}") {
+                            id
+                            nombre
+                            descripcion
+                            videos
+                        }
+                    }
+                `
+            }, {
                 headers: {
-                    'Authorization': 'Bearer ' + sessionStorage.getItem('token'), // Envía el token de autenticación
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`, // Envía el token de autenticación
                 }
             })
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok ' + response.statusText);
-                    }
-                    return response.json(); // Procesa la respuesta y la convierte en JSON
-                })
-                .then(data => {
+                    const data = response.data; // Obtener los datos de la respuesta
+
                     const listasContainer = document.getElementById('listasDeUsuario');
                     listasContainer.innerHTML = '';
 
-                    if (data.length === 0) {
-                        listasContainer.innerHTML = '<p>No hay listas de reproducción asignadas a este perfil.</p>';
+                    if (data.errors) {
+                        listasContainer.innerHTML = '<p>No se pudieron cargar las listas de reproducción.</p>';
                     } else {
-                        data.forEach(lista => {
+                        data.data.getListasUsuario.forEach(lista => {
                             const div = document.createElement('div');
                             div.className = 'playlist-container';
                             div.innerHTML = `<a href="playlist.html" style="text-decoration: none; color: inherit;"><h3>${lista.nombre}</h3><p>${lista.descripcion}</p><p>Cantidad de videos: ${lista.cantidadVideos}</p></a>`;
@@ -67,37 +76,11 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Error al cargar las listas y videos:', error);
+                    console.error('Error al cargar las listas de reproducción:', error);
                     const listasContainer = document.getElementById('listasDeUsuario');
                     listasContainer.innerHTML = '<p>No se pudo cargar la información.</p>';
                 });
         }
-
-        function buscarVideo() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const token = sessionStorage.getItem('token');
-
-            fetch(`http://localhost:3000/buscarvideos?searchTerm=${encodeURIComponent(searchTerm)}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            })
-                .then(response => response.json())
-                .then(videos => {
-                    if (Array.isArray(videos)) {
-                        renderVideos(videos); //mostrar los resultados
-                    } else {
-                        throw new Error('Data is not an array');
-                    }
-                })
-                .catch(error => {
-                    console.error("Error fetching videos:", error);
-                });
-        }
-
-        
     </script>
 
 </body>

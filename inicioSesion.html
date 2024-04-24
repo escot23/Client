@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión</title>
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <script src="funciones.js"></script>
 </head>
 
 <body>
@@ -46,6 +45,7 @@
                 if (responseData.token) {
                     // Almacena el token de sesión en el almacenamiento de sesión del navegador
                     sessionStorage.setItem('token', responseData.token);
+                    sessionStorage.setItem('userId', responseData.userId);
                     console.log(responseData.token);
 
                     // Verifica si el usuario tiene usuarios restringidos asociados
