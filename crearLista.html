@@ -53,6 +53,29 @@
             border-bottom: 1px solid #ddd;
         }
     </style>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">TUBEKIDS</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="pantallaPrincipal.html">Pantalla Principal Tubekids</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="video.html">Atras</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="iniciosesion.html">Salir</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
 </head>
 
 <body>
@@ -181,6 +204,29 @@
                     console.error('Error al eliminar la playlist:', error);
                 });
         }
+
+        function editarPlaylist(id) {
+        const token = sessionStorage.getItem('token');
+        fetch(`http://localhost:3000/usuariosrestringido/listas/${id}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => response.json())
+        .then(lista => {
+            document.getElementById('playlistId').value = lista._id;
+            document.getElementById('playlistNombre').value = lista.nombre;
+            document.getElementById('playlistDescripcion').value = lista.descripcion;
+            document.getElementById('btnGuardarPlaylist').textContent = 'Actualizar'; // Cambiar texto del botón
+            document.getElementById('btnGuardarPlaylist').classList.remove('btn-success'); // Remover clase de color de éxito
+            document.getElementById('btnGuardarPlaylist').classList.add('btn-primary'); // Agregar clase de color primario
+            mostrarFormularioCrear();
+        })
+        .catch(error => {
+            console.error('Error al cargar la lista para editar:', error);
+            alert('No se pudo cargar la información de la lista.');
+        });
+    }
 
         function cargarUsuariosRestringidos() {
             const token = sessionStorage.getItem('token');

@@ -98,7 +98,7 @@
                         <a class="nav-link" href="crearLista.html">Gestion de lista de reproducción</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="cargarPlaylist.html">Ge de reproducción</a>
+                        <a class="nav-link" href="cargarPlaylist.html">Ver listas de reproducción</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="iniciosesion.html">Salir</a>
@@ -379,7 +379,7 @@
         }
 
 
-        function cargarListasConVideos() {
+       function cargarListasConVideos() {
     const token = sessionStorage.getItem('token');
            
     fetch('http://localhost:3000/usuariosrestringido/listasconvideos', {
@@ -407,7 +407,7 @@
                 content += `
                     <div class="video-container">
                         <h3>${video.nombre}</h3>
-                        <iframe class="video-frame" src="https://www.youtube.com/embed/${obtenerVideoId(video.urlYoutube)}" frameborder="0" allowfullscreen></iframe>
+                        <iframe class="video-frame" src="https://www.youtube.com/embed/${extractYouTubeID(video.urlYoutube)}" frameborder="0" allowfullscreen></iframe>
                     </div>
                 `;
             });
@@ -419,6 +419,7 @@
         console.error('Error al cargar las listas y videos:', error);
     });
 }
+
         
         function cargarVideosDePlaylist(playlistId) {
             const token = sessionStorage.getItem('token');
